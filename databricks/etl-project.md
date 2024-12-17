@@ -15,7 +15,7 @@ This project focuses on creating an **ETL pipeline** to analyze sales and user p
 
 ## **Data Sources**:
 1. **Azure SQL Database**: Sales Transaction Data  
-   - Schema: `TransactionId`, `CustomerId`, `ProductId`, `Quantity`, `Price`, `TotalAmount`, `TransactionDate`, `ProfitAmount`, `StoreId`
+   - Schema: `TransactionId`, `CustomerId`, `ProductId`, `Quantity`, `Price`, `TotalAmount`, `TransactionDate`, `ProfitAmount`, `Hour`, `Minute`,`StoreId`
 2. **Azure Data Lake Storage**: User Profile Data (JSON format)
    - Sample JSON Schema:  
      ```json
