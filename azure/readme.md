@@ -8,3 +8,4 @@
 - [Configure Azure Blob Storage](https://learn.microsoft.com/en-us/training/modules/configure-blob-storage/)
 - [Configure Azure Storage security](https://learn.microsoft.com/en-us/training/modules/configure-storage-security/)
 - [Introduction to Azure Data Lake Storage Gen2](https://learn.microsoft.com/en-us/training/modules/introduction-to-azure-data-lake-storage/)
+- [Azure Data Factory](https://github.com/pankajcloudthat/deloitte-pyspark/blob/main/azure/ADF%20Content.pdf)
