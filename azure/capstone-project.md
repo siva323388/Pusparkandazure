@@ -1,139 +1,152 @@
-## **Capstone Project Scenario: Building a Sales Analytics Pipeline in Azure**
+# **Capstone Project: Building a Sales Analytics Pipeline in Azure**
 
-### **Project Title:** 
-End-to-End Data Pipeline and Analytics Solution for Sales Data
 
-### **Objective:**
-Create an automated data pipeline to process, transform, analyze, and visualize sales data stored in various formats (CSV, JSON). The solution will involve Azure Data Factory for ingestion, Azure Data Lake for storage, Azure Databricks for transformation and analysis, and Delta Lake for storing processed data. Additionally, the solution will be automated for monthly updates.
+## **Objective:**
+Design and implement a fully automated solution that integrates, processes, and analyzes sales data from multiple sources (CSV, JSON) using Azure Data Factory (ADF), Azure Data Lake, Azure Databricks, and Delta Lake. The system will generate actionable insights, be scalable, and run monthly updates to handle new data.
+
+## **Business Scenario:**
+A retail company collects sales, product, and customer data. The sales data comes from transactional systems as CSV files, customer data is available in JSON format from an API, and product details are maintained in CSV files. All data is stored in a GitHub repository. 
+
+The goal is to build a centralized and automated data pipeline that:
+1. **Consolidates data:** Brings data into a central repository (Azure Data Lake).  
+2. **Processes and cleanses data:** Ensures high-quality, integrated datasets.  
+3. **Provides analytics:** Generates insights such as regional sales trends, product performance, and monthly sales summaries.  
+4. **Automates updates:** Incorporates new data monthly without manual intervention.
 
 ---
 
-### **Scenario Overview:**
+## **Pipeline Design Overview**
 
-#### **Source Data Details:**
+### **1. Data Sources**
+**Source Files:**
 1. **Sales Data (CSV)**  
-   - **Location:** GitHub (HTTP source)  
-   - **Schema:**
-     ```
-     |-- SaleID: string
-     |-- ProductID: integer
-     |-- CustomerID: string
-     |-- SalesAmount: double
-     |-- Quantity: integer
-     |-- Timestamp: timestamp
-     ```
+   Contains details of each transaction.  
+   - **Fields:** SaleID, ProductID, CustomerID, SalesAmount, Quantity, Timestamp
 
 2. **Customer Data (JSON)**  
-   - **Location:** GitHub (HTTP source)  
-   - **Schema:**
-     ```
-     |-- CustomerID: string
-     |-- FirstName: string
-     |-- Gender: string
-     |-- LastName: string
-     |-- Region: string
-     |-- SSN: string
-     ```
+   Provides demographic and regional data about customers.  
+   - **Fields:** CustomerID, FirstName, LastName, Gender, Region, SSN
 
 3. **Product Data (CSV)**  
-   - **Location:** GitHub (HTTP source)  
-   - **Schema:**
-     ```
-     |-- ProductID: integer
-     |-- ProductName: string
-     |-- Category: string
-     ```
+   Describes products sold.  
+   - **Fields:** ProductID, ProductName, Category
+
+**Storage Location:**  
+All files are hosted in a GitHub repository, accessible via an HTTP URL.
+- [Get Sales Data](https://raw.githubusercontent.com/pankajcloudthat/deloitte-pyspark/refs/heads/main/azure/sales.csv)
+- [Get Customer Data](https://raw.githubusercontent.com/pankajcloudthat/deloitte-pyspark/refs/heads/main/azure/customers.json)
+- [Get Product data](https://raw.githubusercontent.com/pankajcloudthat/deloitte-pyspark/refs/heads/main/azure/products.csv)
 
 ---
 
-### **Steps to Accomplish:**
+### **2. Ingestion Layer: Azure Data Factory**
+**Workflow:**
+1. **Create ADF Pipelines:**  
+   - **Step 1:** Define HTTP-linked services to connect to the GitHub repository.  
+   - **Step 2:** Use copy activities to download files into Azure Data Lake Gen2 (ADLS).  
+   - **Destination:** Raw zone in ADLS with a structured folder hierarchy:
+     - `/raw/sales/`
+     - `/raw/customers/`
+     - `/raw/products/`
 
-#### **1. Data Ingestion:**
-- **Tool:** Azure Data Factory (ADF)  
-- **Process:**  
-  - Create pipelines in ADF to fetch data from GitHub (HTTP source) and store it in **Azure Data Lake**.  
-  - Separate folders for each dataset:
-    - Sales Data: `/raw/sales/`
-    - Customer Data: `/raw/customers/`
-    - Product Data: `/raw/products/`
+2. **Parameterize Pipeline:**  
+   - Use parameters for dynamic file names, source URLs, and output destinations, ensuring the pipeline works for monthly data uploads.
 
----
-
-#### **2. Data Cleansing and Transformation:**
-- **Tool:** Azure Databricks (with PySpark)  
-- **Process:**  
-  - **Read raw data** from Azure Data Lake using PySpark.
-  - **Cleansing:**
-    - Handle null values and inconsistent data.
-    - Validate data formats (e.g., Timestamp format, non-negative SalesAmount, etc.).
-  - **Transformation:**
-    - Merge datasets based on common keys:
-      - `CustomerID` for Sales and Customer Data.
-      - `ProductID` for Sales and Product Data.
-    - Add derived columns such as `Year` and `Month` from the `Timestamp` field.
-  - **Store transformed data** in Delta Lake format in Azure Data Lake (`/processed/`).
+3. **Trigger Automation:**  
+   - Schedule the ADF pipeline to run on the 1st of every month using time-based triggers.
 
 ---
 
-#### **3. Exploratory Data Analysis (EDA):**
-- **Tool:** Databricks Notebooks (Python with Matplotlib/Seaborn/Plotly)  
-- **Process:**
-  - Perform EDA to uncover insights such as:
-    - Sales distribution by region and category.
-    - Monthly trends in sales and quantity.
-  - Visualize findings using charts and graphs (e.g., bar plots, line charts, pie charts).
+### **3. Storage Layer: Azure Data Lake**
+**Structure in ADLS:**
+- **Raw Data:** Unprocessed data ingested from GitHub.  
+- **Processed Data:** Cleaned and transformed data stored in Delta format.  
+- **Output Data:** Aggregated metrics for visualization and analytics.
 
 ---
 
-#### **4. Aggregated Metrics Calculation:**
-- **Metrics:**  
-  - Total Sales (`SUM(SalesAmount)`) and Quantity (`SUM(Quantity)`) by:
-    - **Region**
-    - **Category**
-    - **Year**
-    - **Month**
-- **Storage:**
-  - Save the aggregated data in Delta Lake format.
-  - Register the Delta tables as **External Tables** for easy querying.
+### **4. Transformation Layer: Azure Databricks**
+**Process:**
+1. **Read Raw Data:**  
+   - Use PySpark to load CSV and JSON files from the raw zone in ADLS.  
+
+2. **Data Cleansing:**  
+   - Handle missing or null values.
+   - Normalize inconsistent formats (e.g., unify timestamp format).  
+   - Validate numerical fields (e.g., ensure non-negative sales amounts).  
+
+3. **Data Integration:**  
+   - **Join Datasets:**  
+     - Merge sales data with customer data on `CustomerID`.
+     - Merge the result with product data on `ProductID`.  
+
+4. **Data Transformation:**  
+   - Extract `Year` and `Month` from the `Timestamp` field.  
+   - Calculate additional metrics if required (e.g., `AverageSalesPerProduct`).
+
+5. **Store in Delta Lake:**  
+   - Save the cleaned and transformed data in Delta format in the processed zone of ADLS.
+
+6. **Register External Table:**  
+   - Use Delta Lake to create an external table for querying.
 
 ---
 
-#### **5. Security:**
-- **Tool:** Azure Key Vault  
-- **Process:**
-  - Store secrets like storage account keys, ADF credentials, and Databricks connection strings in Azure Key Vault.
-  - Access secrets securely in ADF and Databricks.
+### **5. Analytics and Visualization:**
+**EDA (Exploratory Data Analysis):**
+- Use Databricks Notebooks with PySpark, Matplotlib, and Plotly to analyze:
+  - Regional sales trends.  
+  - Monthly and yearly sales growth.  
+  - Product category performance.  
+
+**Visualization Outputs:**
+1. Bar plots for total sales by region and category.  
+2. Line charts for monthly sales trends.  
+3. Pie charts showing sales distribution by product category.
 
 ---
 
-#### **6. Automation:**
-- **Tool:** Azure Data Factory and Databricks Jobs  
-- **Process:**  
-  - Schedule the data pipeline in ADF to fetch new data monthly.  
-  - Use Databricks Jobs to automate the cleansing, transformation, and metric calculation processes on a monthly basis.
+### **6. Aggregated Metrics and Reporting:**
+**Metrics:**  
+- Calculate total sales and quantity grouped by:
+  - Region.  
+  - Product Category.  
+  - Year and Month.  
+
+**Output:**
+- Save the aggregated metrics as Delta tables.
 
 ---
 
-#### **Expected Deliverables:**
-1. **Automated Data Pipeline:**  
-   - Fetch raw data from GitHub to Azure Data Lake.
-   - Process and store cleaned data in Delta format.
+### **7. Security:**
+**Azure Key Vault:**
+- Store sensitive information like:
+  - ADLS storage keys.  
+  - Databricks tokens.  
+  - ADF Linked Service credentials.  
 
-2. **Insights and Visualizations:**  
-   - Sales trends and performance charts.
-
-3. **Aggregated Results:**  
-   - Total sales and quantity by Region, Category, Year, and Month.
-
-4. **Automation:**  
-   - Scheduled workflows for monthly updates.
+**Integration:**  
+- Configure ADF and Databricks to fetch secrets from Key Vault securely.
 
 ---
 
-### **Challenges Addressed:**
-1. **Data Integration:** Combining CSV and JSON data into a unified format.
-2. **Automation:** Ensuring monthly updates without manual intervention.
-3. **Scalability:** Using Delta Lake for fast and efficient querying.
-4. **Security:** Protecting sensitive information via Azure Key Vault.
+### **8. Automation:**
+1. **Pipeline Scheduling:**  
+   - Use ADF triggers for monthly ingestion.  
+
+2. **Databricks Job Scheduling:**  
+   - Automate the transformation and aggregation process using Databricks Jobs.  
+   - Use the Databricks CLI or REST API to integrate job triggers with ADF.  
+
+---
+
+### **Challenges Addressed**
+1. **Data Integration Across Formats:** Unified raw data stored in multiple formats (CSV, JSON) into a consistent format.  
+
+2. **Scalability:**  Delta Lake ensures fast querying and storage optimization for large datasets.  
+
+3. **Automation:**  Monthly updates via ADF and Databricks reduce manual effort.  
+
+4. **Security:**  Leveraging Azure Key Vault to manage sensitive credentials.
 
 ---
